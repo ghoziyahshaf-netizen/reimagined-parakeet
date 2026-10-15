@@ -1,0 +1,612 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Physics StepLab - Usaha dan Energi</title>
+<style>
+:root{
+  --bg:#101827;--card:#19263a;--line:#354861;
+  --text:#f4f7fb;--muted:#b8c6d9;
+  --accent:#7ee0c3;--good:#7ee0a1;--bad:#ff9999
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:radial-gradient(ellipse at top,#20344c,#101827 65%);
+  color:var(--text);font:16px/1.6 system-ui,Arial,sans-serif
+}
+main{max-width:850px;margin:auto;padding:16px}
+.card{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:20px;margin:14px 0
+}
+h1{font-size:clamp(27px,5vw,38px);line-height:1.2;margin:8px 0}
+h2{font-size:22px;margin:8px 0}
+p{color:var(--muted)}
+.tag{
+  display:inline-block;padding:4px 11px;border-radius:30px;
+  border:1px solid #49617d;color:var(--accent);font-size:13px
+}
+label{display:block;font-weight:bold;margin:13px 0 5px}
+input,textarea,select{
+  display:block;width:100%;padding:12px;border-radius:10px;
+  border:1px solid #52657d;background:#0e1928;color:white;
+  font:inherit
+}
+textarea{min-height:90px;resize:vertical}
+button{
+  border:0;border-radius:10px;padding:12px 16px;
+  background:var(--accent);color:#10202c;font:inherit;
+  font-weight:bold;cursor:pointer
+}
+button:disabled{opacity:.4;cursor:not-allowed}
+.secondary{background:#344963;color:white}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1;min-width:130px}
+.small{font-size:13px;color:var(--muted)}
+.hidden{display:none!important}
+.question{font-size:19px;color:white}
+.progress{height:8px;background:#0c1522;border-radius:8px;overflow:hidden;margin:14px 0}
+.bar{height:100%;width:0;background:var(--accent);transition:width .2s}
+.status{padding:12px;border-radius:10px;background:#0e1928;margin:12px 0}
+.status.good{color:var(--good);border:1px solid #3b795d}
+.status.bad{color:var(--bad);border:1px solid #7d4646}
+.result{background:#fff;color:#152033;border-radius:12px;padding:18px}
+.result p,.result h2{color:#152033}
+footer{text-align:center;font-size:12px;color:var(--muted);padding:20px}
+@media print{
+ body{background:white;color:black}
+ .no-print,.hero,.workcard,footer{display:none!important}
+ #receipt{display:block!important}
+}
+</style>
+</head>
+<body>
+<main>
+
+<section class="card hero">
+  <span class="tag">FISIKA • KELAS XI</span>
+  <h1>⚡ Physics StepLab</h1>
+  <p>Laboratorium Pemecahan Masalah: Usaha dan Energi</p>
+  <p>
+    Selesaikan setiap soal secara bertahap. Kamu tidak dapat
+    melanjutkan sebelum jawaban pada tahap sekarang benar.
+  </p>
+  <p><b>Gunakan g = 10 m/s².</b> Tuliskan satuan dengan benar.</p>
+</section>
+
+<section class="card" id="setup">
+  <h2>Mulai pengerjaan</h2>
+
+  <label for="student">Nama lengkap</label>
+  <input id="student" placeholder="Masukkan nama lengkap">
+
+  <label for="classroom">Kelas</label>
+  <input id="classroom" placeholder="Contoh: XI MIPA 1">
+
+  <label for="package">Pilih paket soal</label>
+  <select id="package"></select>
+
+  <p class="small">
+    Setiap paket terdiri atas 5 soal. Kerjakan secara mandiri.
+  </p>
+
+  <button id="start">Mulai pengerjaan →</button>
+</section>
+
+<section class="card workcard hidden" id="work">
+  <div class="row">
+    <div>
+      <span class="tag" id="packLabel"></span>
+      <span class="tag" id="levelLabel"></span>
+    </div>
+    <div style="text-align:right">
+      <b id="qCount"></b>
+    </div>
+  </div>
+
+  <div class="progress"><div class="bar" id="bar"></div></div>
+
+  <p class="question" id="question"></p>
+  <div id="steps"></div>
+
+  <div class="status" id="feedback" aria-live="polite">
+    Isi jawabanmu, lalu tekan Periksa Jawaban.
+  </div>
+
+  <div class="row">
+    <button class="secondary" id="check">Periksa jawaban</button>
+    <button id="next" disabled>Lanjut tahap →</button>
+  </div>
+
+  <p class="small">
+    Jika jawaban belum diterima, periksa kembali konsep, angka,
+    operasi matematika, dan satuan.
+  </p>
+</section>
+
+<section class="card hidden" id="done">
+  <h2>🎉 Paket selesai!</h2>
+  <p>Berikut bukti pengerjaan yang dapat ditampilkan kepada guru.</p>
+  <div id="receipt" class="result"></div>
+  <div class="row no-print" style="margin-top:12px">
+    <button id="print">Cetak / Simpan PDF</button>
+    <button class="secondary" id="restart">Kembali ke awal</button>
+  </div>
+</section>
+
+<footer>
+  Physics StepLab • Belajar dengan jujur dan bertanggung jawab.
+  Sistem web tidak dapat menjamin pemblokiran tab atau aplikasi lain.
+</footer>
+
+</main>
+
+<script>
+/* =========================
+   1. KUMPULAN RUMUS
+========================= */
+const FORMULAS = {
+  work: "W = F × s",
+  workAngle: "W = F × s × cos θ",
+  kinetic: "Ek = ½ × m × v²",
+  kineticChange: "Wtotal = ½ × m × (v₂² − v₁²)",
+  potential: "Ep = m × g × h",
+  power: "P = W / t",
+  conservation: "Ep awal + Ek awal = Ep akhir + Ek akhir",
+  freeFall: "v = √(2 × g × Δh)",
+  friction: "μ × m × g × s = m × g × h"
+};
+
+/* =========================
+   2. DATA 10 PAKET
+   Setiap paket memiliki 5 soal.
+========================= */
+const packageValues = [
+  [20,5,50,8,2,3,7,600,20,5,3,4],
+  [15,4,100,10,2,4,8,800,20,4,4,5],
+  [25,6,40,5,3,2,6,900,30,6,2,8],
+  [12,7,60,6,4,2,7,1000,25,5,5,6],
+  [18,5,80,4,2,5,9,1200,30,8,3,7],
+  [30,3,50,8,3,4,8,700,20,7,4,6],
+  [16,6,120,5,5,2,6,1500,25,6,2,9],
+  [22,4,70,6,2,6,10,1100,22,5,6,4],
+  [14,8,90,5,4,3,9,1600,40,9,3,8],
+  [28,5,60,7,3,5,11,1800,30,10,5,9]
+];
+
+/*
+ Setiap soal memiliki:
+ text       = soal
+ known      = data yang diketahui
+ asked      = yang ditanyakan
+ formula    = rumus yang benar
+ subNumbers = angka yang harus muncul saat substitusi
+ result     = jawaban numerik
+ units      = satuan hasil
+*/
+function createQuestions(p){
+  const a = packageValues[p];
+  const F = a[0], s = a[1];
+  const Fa = a[2], sa = a[3];
+  const m = a[4], v1 = a[5], v2 = a[6];
+  const W = a[7], t = a[8];
+  const mass = a[9], h = a[10], mu = a[11];
+
+  const work = F*s;
+  const angleWork = Fa*sa*0.5;
+  const changeKinetic = 0.5*m*(v2*v2-v1*v1);
+  const power = W/t;
+  const frictionDistance = h/mu;
+
+  return [
+    {
+      text:`Sebuah benda didorong dengan gaya ${F} N searah perpindahan sejauh ${s} m. Hitung usaha yang dilakukan.`,
+      known:`F = ${F} N; s = ${s} m; gaya searah perpindahan.`,
+      asked:"Usaha yang dilakukan benda",
+      formula:"work",
+      subNumbers:[F,s],
+      result:[work],
+      units:["J"],
+      substitution:`${F} × ${s}`,
+      explain:`Usaha = gaya × perpindahan = ${F} × ${s}.`
+    },
+    {
+      text:`Sebuah benda ditarik dengan gaya ${Fa} N membentuk sudut 60° terhadap arah perpindahan. Benda berpindah ${sa} m. Jika cos 60° = 0,5, hitung usaha oleh gaya tarik.`,
+      known:`F = ${Fa} N; s = ${sa} m; θ = 60°; cos 60° = 0,5.`,
+      asked:"Usaha oleh gaya tarik",
+      formula:"workAngle",
+      subNumbers:[Fa,sa,0.5],
+      result:[angleWork],
+      units:["J"],
+      substitution:`${Fa} × ${sa} × 0,5`,
+      explain:`W = F × s × cos θ = ${Fa} × ${sa} × 0,5.`
+    },
+    {
+      text:`Benda bermassa ${m} kg mengalami perubahan kecepatan dari ${v1} m/s menjadi ${v2} m/s. Hitung usaha total yang bekerja pada benda.`,
+      known:`m = ${m} kg; v₁ = ${v1} m/s; v₂ = ${v2} m/s.`,
+      asked:"Usaha total pada benda",
+      formula:"kineticChange",
+      subNumbers:[m,v2,v1],
+      result:[changeKinetic],
+      units:["J"],
+      substitution:`½ × ${m} × (${v2}² − ${v1}²)`,
+      explain:`Wtotal = ½ × m × (v₂² − v₁²).`
+    },
+    {
+      text:`Sebuah mesin melakukan usaha ${W} J selama ${t} sekon. Hitung daya mesin tersebut.`,
+      known:`W = ${W} J; t = ${t} s.`,
+      asked:"Daya mesin",
+      formula:"power",
+      subNumbers:[W,t],
+      result:[power],
+      units:["W"],
+      substitution:`${W} / ${t}`,
+      explain:`P = W / t = ${W} / ${t}.`
+    },
+    {
+      text:`Sebuah balok meluncur dari ketinggian ${h} m pada bidang miring licin, lalu memasuki bidang datar kasar. Koefisien geseknya ${mu}. Balok berhenti di bidang datar. Hitung jarak tempuh pada bidang kasar.`,
+      known:`h = ${h} m; μ = ${mu}; g = 10 m/s²; balok berhenti.`,
+      asked:"Jarak tempuh pada bidang kasar",
+      formula:"friction",
+      subNumbers:[h,mu],
+      result:[frictionDistance],
+      units:["m"],
+      substitution:`s = h / μ = ${h} / ${mu}`,
+      explain:`Dari kekekalan energi, mgh = μmgs sehingga s = h/μ.`
+    }
+  ];
+}
+
+/* =========================
+   3. STATUS APLIKASI
+========================= */
+let pack = 0;
+let qi = 0;
+let step = 0;
+let attempts = 0;
+let tabWarnings = 0;
+let startedAt = 0;
+let questionData = [];
+let stepRecords = [];
+
+const $ = id => document.getElementById(id);
+
+const stepNames = [
+  "DIKETAHUI",
+  "DITANYAKAN",
+  "RUMUS",
+  "SUBSTITUSI",
+  "PERHITUNGAN & HASIL"
+];
+
+const hints = [
+  "Tuliskan besaran yang diketahui beserta angka dan satuannya.",
+  "Tuliskan besaran yang diminta oleh soal.",
+  "Pilih rumus fisika yang sesuai.",
+  "Masukkan angka yang diketahui ke dalam rumus.",
+  "Masukkan hasil akhir beserta satuannya."
+];
+
+const levels = [
+  "Dasar",
+  "Dasar",
+  "Menengah",
+  "Menengah",
+  "Analisis"
+];
+
+const select = $("package");
+for(let i=1;i<=10;i++){
+  const opt = document.createElement("option");
+  opt.value = i-1;
+  opt.textContent = `Paket ${i}`;
+  select.appendChild(opt);
+}
+
+/* =========================
+   4. FUNGSI PEMBANTU
+========================= */
+function normalize(s){
+  return String(s || "")
+    .toLowerCase()
+    .replace(/,/g,".")
+    .replace(/²/g,"^2")
+    .replace(/₁/g,"1")
+    .replace(/₂/g,"2")
+    .replace(/½/g,"0.5")
+    .replace(/×/g,"*")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function numbers(s){
+  return (String(s).replace(/,/g,".")
+    .match(/-?\d+(?:\.\d+)?/g) || [])
+    .map(Number);
+}
+
+function close(a,b){
+  return Math.abs(a-b) <= Math.max(0.03,Math.abs(b)*0.015);
+}
+
+function safe(s){
+  return String(s).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function showFeedback(message,good){
+  $("feedback").className = "status " + (good ? "good" : "bad");
+  $("feedback").textContent = message;
+}
+
+/* =========================
+   5. MENAMPILKAN TAHAP
+========================= */
+function showStep(){
+  const q = questionData[qi];
+
+  $("packLabel").textContent = `PAKET ${pack+1}`;
+  $("levelLabel").textContent = levels[qi];
+  $("qCount").textContent = `Soal ${qi+1} dari 5`;
+  $("question").textContent = q.text;
+
+  $("bar").style.width =
+    `${((qi*5+step)/25)*100}%`;
+
+  const container = $("steps");
+  container.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.innerHTML =
+    `<div class="tag">LANGKAH ${step+1} DARI 5</div>
+     <h2>${stepNames[step]}</h2>
+     <p>${hints[step]}</p>`;
+  container.appendChild(title);
+
+  if(step === 2){
+    const sel = document.createElement("select");
+    sel.id = "entry";
+    sel.innerHTML = `<option value="">— Pilih rumus —</option>` +
+      Object.entries(FORMULAS)
+      .map(([key,value]) =>
+        `<option value="${key}">${value}</option>`)
+      .join("");
+    container.appendChild(sel);
+  }else{
+    const field = document.createElement("textarea");
+    field.id = "entry";
+    field.placeholder = [
+      "Contoh: F = 20 N; s = 5 m",
+      "Contoh: usaha yang dilakukan",
+      "",
+      "Contoh: 20 × 5",
+      "Contoh: 100 J"
+    ][step];
+    container.appendChild(field);
+  }
+
+  $("check").disabled = false;
+  $("next").disabled = true;
+  $("next").textContent =
+    step === 4
+      ? (qi === 4 ? "Lihat hasil akhir →" : "Soal berikutnya →")
+      : "Lanjut tahap →";
+
+  showFeedback("Isi jawaban, lalu tekan Periksa jawaban.",true);
+}
+
+/* =========================
+   6. MEMERIKSA JAWABAN
+========================= */
+function validate(){
+  const q = questionData[qi];
+  const field = $("entry");
+  const value = field.value.trim();
+  const n = normalize(value);
+  let ok = false;
+  let message = "";
+
+  if(!value){
+    showFeedback("Jawaban masih kosong. Isi tahap ini dahulu.",false);
+    attempts++;
+    return;
+  }
+
+  if(step === 0){
+    /*
+      Pemeriksaan Diketahui:
+      setidaknya dua nilai numerik utama harus sesuai.
+    */
+    const given = numbers(q.known);
+    const entered = numbers(value);
+    const matches = given.filter(x =>
+      entered.some(y=>close(x,y))
+    ).length;
+
+    ok = value.length >= 5 &&
+      matches >= Math.min(2,given.length);
+
+    message = ok
+      ? "Data diketahui diterima. Lanjutkan!"
+      : "Data belum lengkap atau angkanya belum cocok. Cantumkan angka dan satuan yang relevan.";
+  }
+
+  else if(step === 1){
+    const target = normalize(q.asked);
+    const keywords = target.split(/[\s()–-]+/)
+      .filter(x=>x.length>3);
+
+    ok = keywords.some(k=>n.includes(k));
+
+    message = ok
+      ? "Besaran yang ditanyakan diterima."
+      : "Besaran yang dicari belum cocok. Tuliskan secara jelas apa yang diminta soal.";
+  }
+
+  else if(step === 2){
+    ok = value === q.formula;
+
+    message = ok
+      ? "Rumus benar! Sekarang masukkan angka ke rumus."
+      : "Rumus belum tepat. Pilih rumus yang sesuai dengan konsep fisika pada soal.";
+  }
+
+  else if(step === 3){
+    const entered = numbers(value);
+    const required = q.subNumbers;
+
+    const matches = required.every(x =>
+      entered.some(y=>close(x,y))
+    );
+
+    ok = matches && value.length >= 3;
+
+    message = ok
+      ? "Substitusi angka diterima. Lanjutkan menghitung hasilnya."
+      : "Substitusi belum cocok. Periksa angka yang dimasukkan dan susunan rumusnya.";
+  }
+
+  else if(step === 4){
+    const entered = numbers(value);
+    const resultOK = q.result.every(x =>
+      entered.some(y=>close(x,y))
+    );
+
+    const unitOK = q.units.every(u =>
+      n.includes(normalize(u))
+    );
+
+    ok = resultOK && unitOK;
+
+    message = ok
+      ? "Hasil akhir benar beserta satuannya. Tahap ini selesai!"
+      : "Hasil akhir belum tepat. Periksa perhitungan, nilai, dan satuan.";
+  }
+
+  if(ok){
+    stepRecords.push({
+      question:qi+1,
+      step:stepNames[step],
+      answer:value
+    });
+    showFeedback(message,true);
+    $("check").disabled = true;
+    $("next").disabled = false;
+  }else{
+    attempts++;
+    showFeedback(message,false);
+  }
+}
+
+/* =========================
+   7. PINDAH TAHAP
+========================= */
+function advance(){
+  if(step < 4){
+    step++;
+    showStep();
+    return;
+  }
+
+  if(qi < 4){
+    qi++;
+    step = 0;
+    showStep();
+    return;
+  }
+
+  finish();
+}
+
+/* =========================
+   8. HALAMAN HASIL
+========================= */
+function finish(){
+  $("work").classList.add("hidden");
+  $("done").classList.remove("hidden");
+  $("bar").style.width = "100%";
+
+  const name = $("student").value.trim();
+  const classroom = $("classroom").value.trim();
+  const elapsed = Math.floor((Date.now()-startedAt)/1000);
+  const mins = Math.floor(elapsed/60);
+  const secs = elapsed%60;
+
+  $("receipt").innerHTML = `
+    <h2>BUKTI PENGERJAAN FISIKA</h2>
+    <p><b>Nama:</b> ${safe(name)}</p>
+    <p><b>Kelas:</b> ${safe(classroom)}</p>
+    <p><b>Mata pelajaran:</b> Fisika</p>
+    <p><b>Materi:</b> Usaha dan Energi</p>
+    <p><b>Paket:</b> ${pack+1}</p>
+    <p><b>Soal diselesaikan:</b> 5 dari 5</p>
+    <p><b>Jumlah percobaan jawaban yang belum diterima:</b> ${attempts}</p>
+    <p><b>Peringatan halaman tidak aktif:</b> ${tabWarnings}</p>
+    <p><b>Waktu pengerjaan:</b> ${mins} menit ${secs} detik</p>
+    <hr>
+    <p><b>Pernyataan:</b> Saya telah menyelesaikan soal ini secara mandiri.</p>
+    <p>Waktu selesai: ${new Date().toLocaleString("id-ID")}</p>
+  `;
+}
+
+/* =========================
+   9. TOMBOL
+========================= */
+$("start").onclick = () => {
+  const name = $("student").value.trim();
+  const classroom = $("classroom").value.trim();
+
+  if(!name || !classroom){
+    alert("Isi nama lengkap dan kelas terlebih dahulu.");
+    return;
+  }
+
+  pack = Number(select.value);
+  questionData = createQuestions(pack);
+  qi = 0;
+  step = 0;
+  attempts = 0;
+  tabWarnings = 0;
+  stepRecords = [];
+  startedAt = Date.now();
+
+  $("setup").classList.add("hidden");
+  $("done").classList.add("hidden");
+  $("work").classList.remove("hidden");
+
+  showStep();
+};
+
+$("check").onclick = validate;
+$("next").onclick = advance;
+$("print").onclick = () => window.print();
+$("restart").onclick = () => location.reload();
+
+/* =========================
+   10. PERINGATAN PINDAH TAB
+========================= */
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden && !$("work").classList.contains("hidden")){
+    tabWarnings++;
+  }else if(!$("work").classList.contains("hidden")){
+    showFeedback(
+      `Peringatan: halaman terdeteksi tidak aktif ${tabWarnings} kali. Lanjutkan pengerjaan dengan jujur.`,
+      false
+    );
+  }
+});
+
+window.addEventListener("blur",()=>{
+  if(!$("work").classList.contains("hidden")){
+    // Mencatat kehilangan fokus jendela.
+    // Tidak dapat memastikan aplikasi apa yang dibuka.
+  }
+});
+
+</script>
+</body>
+</html>
